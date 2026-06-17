@@ -1,6 +1,11 @@
 import os
 from twilio.rest import Client
-from dotenv import load_dotenv
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv():
+        return False
 
 load_dotenv()
 
@@ -26,6 +31,6 @@ def send_alert_sms(message: str):
             )
             print("[SMS SENT]", message)
         else:
-            print("[SMS FAILED] Twilio credentials missing")
+            print("[SMS SKIPPED] Twilio credentials missing")
     except Exception as e:
         print("[SMS FAILED]", e)

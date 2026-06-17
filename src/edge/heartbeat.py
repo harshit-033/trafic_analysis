@@ -1,7 +1,7 @@
 # edge/heartbeat.py
 import time, requests, psutil
 JUNCTION = "J1"
-BACKEND = "http://127.0.0.1:8000/heartbeat"   # adjust if backend host differs
+BACKEND = "http://127.0.0.1:8001/heartbeat"   # adjust if backend host differs
 
 def send_heartbeat(fps=0.0, avg_conf=0.0, camera_ok=True):
     payload = {

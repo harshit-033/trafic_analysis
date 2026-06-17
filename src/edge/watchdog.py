@@ -7,8 +7,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from src.backend.sms_utils import send_alert_sms   # ✅ SMS fallback
 
 JUNCTION_ID = "J1"
-BACKEND_ALERT = "http://127.0.0.1:8000/alert"
-BACKEND_HEALTH = "http://127.0.0.1:8000/"
+BACKEND_ALERT = "http://127.0.0.1:8001/alert"
+BACKEND_HEALTH = "http://127.0.0.1:8001/"
 
 # Processes to monitor
 PROCS = {

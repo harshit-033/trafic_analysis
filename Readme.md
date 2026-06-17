@@ -1,100 +1,59 @@
-# 🚦 SmartFlow (AutoRoute)
+# SmartFlow - Intelligent Traffic Monitoring System
 
-**SmartFlow** is an intelligent, computer-vision-based traffic monitoring and dynamic signal-timing prototype. 
+SmartFlow is a computer vision-based smart traffic signal prototype. It uses YOLO object detection to identify and count vehicles from traffic camera footage, sends live detection results to a FastAPI backend, stores events in MongoDB, computes adaptive green-light timings using weighted vehicle counts, and visualizes real-time traffic, system health, alerts, and signal timings through a React/Vite dashboard. Edge scripts provide heartbeat monitoring and watchdog-based recovery.
 
-Using state-of-the-art YOLO object detection running on edge devices, SmartFlow watches live traffic camera feeds, counts varying vehicle types (cars, buses, trucks, bikes), and sends real-time data to a central FastAPI backend. The backend dynamically calculates optimal green-light times based on the weighted volume of traffic at each intersection approach, ensuring that busier roads get more time to flow. 
+## Project Structure (Runtime Essentials)
 
-## ✨ Key Advantages & Features
+If the model is already trained, you only need the following core components to run the system:
 
-* **Dynamic Adaptive Timing:** Escapes the inefficiency of static timers by granting green-light time proportionally to the actual live vehicle load. Heavy vehicles like buses/trucks are weighted higher.
-* **Edge-to-Cloud Architecture:** Heavy video processing happens on the edge (the camera node). Only lightweight JSON telemetry is sent over the network to the database, saving massive amounts of bandwidth.
-* **Resilient & Self-Healing:** Built-in Heartbeat and Watchdog scripts continuously monitor the edge node. If a camera disconnects or the AI process crashes, the watchdog automatically restarts it.
-* **Live Analytics Dashboard:** A Streamlit-powered dashboard gives city planners and operators a real-time view into junction health, traffic composition pie charts, automated timings, and system alerts.
-* **Instant SMS Alerts:** If a junction goes offline or enters a critical state, the system utilizes Twilio to instantly SMS the system administrator.
+- **`src/backend/`**: FastAPI server, timing logic, and MongoDB integration.
+- **`src/edge/`**: Runtime scripts for the physical intersection (`inference3.py`, `heartbeat.py`, `watchdog.py`).
+- **`frontend/`**: The React/Vite dashboard UI.
+- **`infra/`**: Docker Compose file for launching MongoDB.
+- **`models/best.pt`**: Your trained YOLO model weights.
+- **`data/sample2.mp4`**: Sample video file acting as the camera feed.
+- **`.env`**: Environment variables (Twilio credentials, Mongo URI).
+- **`requirements.txt`**: Python dependencies.
 
-## 🏙️ Real-World Use Cases
+*(Other folders like `ai/`, `experiments/`, and `docs/` are useful for research and model training but are not required to run the live dashboard and inference system).*
 
-1. **Smart City Intersections:** Reduce daily commuter congestion, lowering idle-engine carbon emissions and improving average travel speeds.
-2. **Emergency Vehicle Corridors:** By tracking approaching traffic volumes, future modules can force green waves for ambulances and fire trucks.
-3. **Traffic Auditing:** Automatically log daily vehicle counts to MongoDB, replacing the need for expensive manual traffic studies and road tubes.
-4. **Temporary Construction Zones:** Deploy a portable camera and edge device to a construction site to dynamically manage alternating one-way traffic without a human flagger.
+## How to Run the Project
 
----
-
-## 🏗️ Project Architecture
-
-* **AI Edge Node (`src/edge`):** Runs YOLO object detection (`inference3.py`), a health monitoring script (`heartbeat.py`), and a self-recovery manager (`watchdog.py`). 
-* **Backend Core (`src/backend`):** A FastAPI application that receives telemetry, interfaces with MongoDB for persistence, computes the signal timings, and dispatches Twilio SMS alerts.
-* **Live Dashboard (`src/dashboard`):** A Streamlit application that polls the backend to visualize current system status.
-* **Infrastructure (`infra/`):** Docker Compose configuration to instantly spin up the MongoDB instance.
-
----
-
-## 🚀 Local Setup Guide
-
-Follow these steps to run the complete SmartFlow system on your local machine.
-
-### Prerequisites
-* **Python 3.10+** (Tested on Python 3.13)
-* **Docker Desktop** (For running the local MongoDB database)
-* **NVIDIA GPU** (Optional but highly recommended for fast YOLO inference. Install CUDA 12.4 enabled PyTorch if you have an RTX card).
-
-### 1. Clone & Configure
-```bash
-git clone https://github.com/yourusername/SmartFlow.git
-cd SmartFlow
-
-# Create a virtual environment
-python -m venv venv
-
-# Activate venv (Windows)
-.\venv\Scripts\activate
-# Activate venv (Mac/Linux)
-# source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-### 2. Environment Variables
-Copy the provided example environment file and fill in your details:
-```bash
-cp .env.example .env
-```
-Inside `.env`, you can add your **Twilio** credentials if you want SMS alerts. The MongoDB credentials are set up for local Docker use by default.
-
-### 3. Start the Database
-Spin up the MongoDB container using Docker Compose:
+### 1. Start the Database (MongoDB)
+Start the MongoDB container from the project root:
 ```bash
 docker compose -f infra/docker-compose.yml up -d
 ```
 
-### 4. Run the Services
-You need to run these components simultaneously. Open separate terminal windows, ensure your `venv` is activated in each, and run:
-
-**Terminal A (Backend API):**
+### 2. Start the FastAPI Backend
+Activate your virtual environment and start the backend on port 8001:
 ```bash
-uvicorn src.backend.main:app --reload
+python -m uvicorn src.backend.main:app --port 8001 --reload
 ```
 
-**Terminal B (Live Dashboard):**
+### 3. Start the React Frontend
+Navigate to the frontend directory and start the Vite development server:
 ```bash
-streamlit run src/dashboard/app.py
+cd frontend
+npm install
+npm run dev
 ```
+Access the dashboard at `http://localhost:5173/`.
 
-**Terminal C (Edge Inference):**
-*Note: Make sure you have a test video placed at `data/sample2.mp4`.*
-```bash
-python src/edge/inference3.py
-```
+### 4. Start the Edge Services
+Open a new terminal for each of the following commands in the project root to simulate the hardware running at the junction:
 
-**Terminal D (Edge Heartbeat):**
+**Heartbeat Monitor:**
 ```bash
 python src/edge/heartbeat.py
 ```
 
-> **Pro-Tip:** Instead of running the inference and heartbeat manually, you can test the self-healing system by just running `python src/edge/watchdog.py`. The watchdog will automatically spawn the AI and Heartbeat for you!
+**AI Inference:**
+```bash
+python src/edge/inference3.py
+```
 
----
-
-*Built with ❤️ using PyTorch, FastAPI, and Streamlit.*
+**Watchdog:**
+```bash
+python src/edge/watchdog.py
+```

@@ -7,13 +7,18 @@ from pymongo import MongoClient, errors
 from src.backend.sms_utils import send_alert_sms
 import psutil
 import os
-from dotenv import load_dotenv
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv():
+        return False
 
 load_dotenv()
 # Mongo
 try:
     mongo_uri = os.getenv("MONGO_URI", "mongodb://admin:admin123@localhost:27017/")
-    client = MongoClient(mongo_uri, serverSelectionTimeoutMS=2000)
+    client = MongoClient(mongo_uri, serverSelectionTimeoutMS=500, connectTimeoutMS=500)
     db = client["autoroute"]
     detections_col = db["detections"]
     timings_col = db["timings"]
@@ -21,12 +26,22 @@ try:
     alerts_col = db["alerts"]
     processes_col = db["processes"]       # new collection to track processes
     client.server_info()
-    print("[DB] Connected to MongoDB ✅")
+    print("[DB] Connected to MongoDB")
 except errors.ServerSelectionTimeoutError as e:
-    print("[DB ERROR] Could not connect ❌", e)
+    print("[DB ERROR] Could not connect", e)
     detections_col = timings_col = heartbeats_col = alerts_col = processes_col = None
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="SmartFlow Backend", version="1.6")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Schemas
 class Detection(BaseModel):
@@ -100,7 +115,7 @@ def receive_detections(payload: DetectionPayload):
 @app.get("/latest/{junction_id}")
 def get_latest_counts(junction_id: str):
     if detections_col is None:
-        raise HTTPException(status_code=500, detail="DB not available")
+        return {"junction_id": junction_id, "counts": {}, "msg": "DB not available"}
     doc = detections_col.find_one({"junction_id": junction_id}, sort=[("_id", -1)])
     if not doc:
         return {"junction_id": junction_id, "counts": {}, "msg": "No data"}
@@ -134,7 +149,7 @@ def receive_heartbeat(payload: HeartbeatPayload):
 def status(junction_id: str):
     """Return small health summary and last heartbeat metrics (ISO timestamp)."""
     if heartbeats_col is None:
-        raise HTTPException(status_code=500, detail="DB not available")
+        return {"junction_id": junction_id, "status": "OFFLINE", "last_seen": None, "metrics": {}}
     hb = heartbeats_col.find_one({"junction_id": junction_id}, sort=[("ts", -1)])
     now = datetime.utcnow()
     if not hb:
@@ -244,7 +259,7 @@ def receive_alert(payload: Dict[str, Any]):
 @app.get("/alerts/{junction_id}")
 def get_alerts(junction_id: str):
     if alerts_col is None:
-        raise HTTPException(status_code=500, detail="DB not available")
+        return {"junction_id": junction_id, "alerts": []}
     alerts = list(alerts_col.find({"junction_id": junction_id}).sort("ts", -1).limit(20))
     out = []
     for a in alerts:
@@ -253,4 +268,4 @@ def get_alerts(junction_id: str):
 
 @app.get("/")
 def root():
-    return {"msg": "SmartFlow Backend Running 🚦"}
+    return {"msg": "SmartFlow Backend Running"}

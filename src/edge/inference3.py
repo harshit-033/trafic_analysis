@@ -11,7 +11,7 @@ import sys
 def startmodel():
     MODEL_PATH = "models/best.pt"   # Change path if needed
     VIDEO_PATH = "data/sample2.mp4"                         # Change path if needed
-    BACKEND_URL = "http://127.0.0.1:8000/detections"
+    BACKEND_URL = "http://127.0.0.1:8001/detections"
     JUNCTION_ID = "J1"
 
     # Load YOLO model
