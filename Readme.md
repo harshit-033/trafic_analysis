@@ -245,7 +245,3 @@ The `ai/` and `experiments/` directories are only needed for research, re-traini
 | Monitoring | psutil |
 
 ---
-
-## 📄 License
-
-This project is for educational and research purposes. See `LICENSE` for details.
