@@ -97,3 +97,6 @@ python src/edge/heartbeat.py
 
 ---
 
+> You can replace sample2.mp4 with your own test video but keep your video in the same directory as sample2 and rename your video as sample2.mp4.
+
+
