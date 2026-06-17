@@ -1,0 +1,702 @@
+PROJECT DETAILS - COMPUTER_VISION / SMARTFLOW / AUTOROUTE
+Generated on: 2026-06-16
+
+1. PROJECT SUMMARY
+==================
+This repository is a Python-based computer vision prototype for smart traffic monitoring and dynamic traffic signal timing.
+
+The main idea:
+- A YOLO object detection model analyzes video/camera frames.
+- The edge inference script counts detected vehicle classes.
+- The backend receives detections and stores them in MongoDB.
+- The backend computes traffic signal timing based on weighted vehicle counts.
+- A Streamlit dashboard displays live counts, signal health, process status, computed timings, and alerts.
+- Edge heartbeat and watchdog scripts monitor runtime health and report failures.
+
+The project currently mixes production-intended prototype code, older experiments, datasets, trained model weights, and unrelated small scripts.
+
+Main product names used in code:
+- SmartFlow
+- AutoRoute
+- Traffic Signal Timing System
+
+
+2. HIGH-LEVEL ARCHITECTURE
+==========================
+Core runtime flow:
+
+1. MongoDB starts locally through Docker or Docker Compose.
+2. FastAPI backend starts on http://127.0.0.1:8000.
+3. Edge inference script loads a YOLO model and reads video/camera frames.
+4. YOLO produces detections with class id, confidence, and bounding box coordinates.
+5. The inference script converts detections into per-class counts.
+6. The inference script posts detections to POST /detections.
+7. Backend stores detections in MongoDB collection autoroute.detections.
+8. Dashboard polls backend endpoints every 5 seconds.
+9. Dashboard shows latest counts, signal health, computed timings, process status, and alerts.
+10. Heartbeat script posts hardware/runtime metrics to POST /heartbeat.
+11. Watchdog checks backend, inference, and heartbeat processes and restarts/report alerts when they fail.
+
+Main components:
+- backend/: FastAPI API server, MongoDB persistence, timing algorithm, alert handling.
+- dashboard/: Streamlit dashboard.
+- ai/: YOLO inference experiments, model weights, training/output artifacts, datasets.
+- edge/: runtime edge scripts for inference, heartbeat, watchdog.
+- infra/: MongoDB Docker Compose file.
+
+
+3. TECHNOLOGY STACK
+===================
+Language:
+- Python
+
+Backend:
+- FastAPI
+- Pydantic
+- Uvicorn, expected for running FastAPI
+- PyMongo for MongoDB access
+- psutil for process and system metrics
+
+Computer vision / AI:
+- OpenCV (cv2)
+- Ultralytics YOLO
+- PyTorch / TorchVision, used by YOLO and tested in ai/verify.py
+- NumPy
+
+Database:
+- MongoDB 6
+- Database name: autoroute
+- Main collections:
+  - detections
+  - timings
+  - heartbeats
+  - alerts
+  - processes
+
+Dashboard:
+- Streamlit
+- streamlit-autorefresh
+- requests
+- pandas
+- matplotlib
+
+Monitoring / alerts:
+- psutil
+- Twilio SMS through twilio.rest.Client
+
+Infrastructure:
+- Docker / Docker Compose for MongoDB
+
+Other prototype tech:
+- websockets in trial.py for an older simulator
+- pyautogui in spam.py, unrelated to the traffic system
+- x86 assembly in new.asm, unrelated to the traffic system
+
+
+4. IMPORTANT FILES AND PURPOSE
+==============================
+backend/main.py
+- Current main FastAPI backend.
+- Connects to MongoDB at mongodb://admin:admin123@localhost:27017/.
+- Defines detection, heartbeat, timing, process status, alert, and root endpoints.
+- Stores incoming data in MongoDB.
+- Computes adaptive signal timings from vehicle counts.
+
+backend/sms_utils.py
+- Twilio SMS helper.
+- Sends alerts to a configured phone number.
+- Contains hardcoded Twilio credentials and phone numbers. This is a security risk and should be moved to environment variables immediately.
+
+backend/db_test.py
+- Small MongoDB connectivity test.
+- Inserts a test document into autoroute.detections.
+
+dashboard/app.py
+- Streamlit dashboard for live monitoring.
+- Polls backend at http://127.0.0.1:8000.
+- Fixed junction id: J1.
+- Shows live detection counts, pie chart, health metrics, computed signal timings, process status, and recent alerts.
+
+edge/inference3.py
+- Edge inference runner intended for live deployment.
+- Loads YOLO model from ai/runs/detect/train15/weights/best.pt.
+- Reads video from data/sample2.mp4.
+- Processes every second frame.
+- Uses a Queue and background thread to send detections asynchronously to the backend.
+- Displays annotated frames with FPS and count overlay.
+
+edge/heartbeat.py
+- Posts system health every 10 seconds to POST /heartbeat.
+- Sends CPU percent, memory percent, FPS, average confidence, and camera status.
+
+edge/watchdog.py
+- Monitors inference3.py, heartbeat.py, and backend health.
+- Restarts inference and heartbeat processes up to 5 times.
+- Posts alerts to backend or sends SMS fallback if backend is unreachable.
+
+infra/docker-compose.yml
+- Starts MongoDB 6 container.
+- Container name: autoroute-mongo.
+- Exposes port 27017.
+- Uses username admin and password admin123.
+
+docker.txt
+- One-line docker run command for MongoDB.
+- Equivalent purpose to infra/docker-compose.yml.
+
+Readme.md
+- Current content appears to be an older copy of backend/main.py, not a proper README.
+- Should be replaced with a clean setup and usage README.
+
+ai/inference.py
+- Early YOLO inference script.
+- Loads Weapon.pt and reads weapon.mp4.
+- Posts detections and class counts to backend.
+- Draws boxes and displays frames with OpenCV.
+
+ai/inference1.py
+- Older traffic/video inference experiment.
+- Uses runs/detect/train7/weights/best.pt and data/sample.mp4.
+- Payload format does not match the current backend schema because it posts "junction" instead of "junction_id" and omits ts/counts.
+
+ai/inference2.py
+- Faster weapon inference experiment.
+- Uses threading to post detections asynchronously.
+- Payload format also does not match the current backend schema.
+
+ai/inference3.py
+- Current-ish AI inference prototype similar to edge/inference3.py.
+- Loads best.pt and sample2.mp4 relative to its working directory.
+- Posts schema-compatible detection payload with junction_id, ts, detections, counts.
+
+ai/utils.py
+- Utility functions for image entropy and bounding box center.
+- map_to_lane is currently a stub and not implemented.
+
+ai/out.py
+- Exports a YOLO model to ONNX format.
+
+ai/verify.py
+- Checks Torch, TorchVision, CUDA availability, GPU count, and NMS operation.
+- Assumes CUDA is available because tensors are moved with .cuda().
+
+ai/test1.py
+- Person-counting webcam experiment using YOLOv8n.
+- Counts people per minute and displays live OpenCV output.
+
+ai/test2.py
+- Image person-counting experiment using YOLOv8n.
+- Contains a likely bug: argparse defines argument name "4.png" but later code reads args.image_path.
+
+trial.py
+- Older standalone FastAPI plus WebSocket simulator.
+- Simulates vehicle counts, signal timing, health status, and failure mode.
+- Not integrated with the current MongoDB backend/dashboard flow.
+
+trial2.py
+- Older Streamlit snippet expecting /status/J1 to return last_counts.
+- Not compatible with current backend response shape.
+
+test.py
+- Small psutil experiment that checks whether a process containing "WhatsApp" is running.
+- Not part of the traffic system.
+
+spam.py
+- pyautogui automation script that types repeated text.
+- Unrelated to the traffic system and should be removed from a clean project.
+
+new.asm
+- Assembly program that prints numbers 1 to 10.
+- Unrelated to the traffic system.
+
+new.py
+- Empty file.
+
+
+5. BACKEND API DETAILS
+======================
+Base URL:
+- http://127.0.0.1:8000
+
+GET /
+- Health/root endpoint.
+- Returns message that SmartFlow backend is running.
+
+POST /detections
+- Receives AI detections from edge device.
+- Expected JSON:
+  {
+    "junction_id": "J1",
+    "ts": 1710000000.0,
+    "detections": [
+      {"cls": 2, "conf": 0.91, "xyxy": [10, 20, 100, 200]}
+    ],
+    "counts": {"car": 3, "bus": 1}
+  }
+- Stores document in autoroute.detections.
+- Timestamp is converted from Unix seconds to UTC datetime.
+
+GET /latest/{junction_id}
+- Returns latest detection counts for a junction.
+- Used by dashboard for live counts.
+
+POST /heartbeat
+- Receives edge health metrics.
+- Expected JSON:
+  {
+    "junction_id": "J1",
+    "ts": 1710000000.0,
+    "cpu": 40.5,
+    "mem": 62.0,
+    "fps": 12.3,
+    "avg_conf": 0.77,
+    "camera_ok": true
+  }
+- Stores document in autoroute.heartbeats.
+
+GET /status/{junction_id}
+- Reads latest heartbeat and returns status:
+  - OK if last heartbeat is <= 15 seconds old.
+  - DEGRADED if last heartbeat is <= 45 seconds old.
+  - OFFLINE if last heartbeat is older than 45 seconds.
+- Sends SMS when offline. This can spam SMS if the endpoint is polled repeatedly.
+
+POST /compute_timing
+- Computes signal timing from counts per approach.
+- Expected JSON:
+  {
+    "junction_id": "J1",
+    "approaches": {
+      "N": {"car": 4, "bus": 1},
+      "S": {"bike": 6},
+      "E": {},
+      "W": {"truck": 1}
+    }
+  }
+- Stores result in autoroute.timings.
+- Returns cycle_length and per-approach phases.
+
+POST /process_status
+- Accepts process state posted by watchdog-like systems.
+- Stores/upserts into autoroute.processes.
+- Current dashboard does not use stored process status; it calls live psutil status endpoint instead.
+
+GET /process_status/{junction_id}
+- Checks local machine process list for inference3.py and heartbeat.py.
+- Returns running/stopped status.
+
+POST /alert
+- Stores alert in autoroute.alerts.
+- Sends SMS using Twilio.
+
+GET /alerts/{junction_id}
+- Returns latest 20 alerts for the junction.
+- Current alert writer may store "junction" while reader filters by "junction_id", so some alerts may not appear in dashboard.
+
+
+6. SIGNAL TIMING LOGIC
+======================
+The current timing algorithm is in backend/main.py.
+
+Vehicle weights:
+- bike: 0.5
+- car: 1.0
+- bus: 2.5
+- truck: 3.0
+- pedestrian: 1.0
+- unknown classes default to 1.0
+
+Constants:
+- MIN_GREEN = 5.0 seconds
+- MAX_GREEN = 60.0 seconds
+- BASE_CYCLE = 30.0 seconds
+- K = 30.0
+- MAX_CAPACITY_PER_APPROACH = 30.0
+- YELLOW_TIME = 3.0 seconds
+- ALL_RED = 1.0 seconds
+
+Algorithm:
+1. For each approach, convert object counts into weighted traffic load.
+2. Sum total weighted load.
+3. If total load is zero, split BASE_CYCLE equally across approaches.
+4. Otherwise compute cycle length:
+   BASE_CYCLE + K * (total_load / (number_of_approaches * MAX_CAPACITY_PER_APPROACH))
+5. Effective green time excludes yellow and all-red for every approach.
+6. Each approach gets green time proportional to its weighted load.
+7. Green time is clamped between MIN_GREEN and MAX_GREEN.
+
+Limitation:
+- If every approach receives the same global count object, the dashboard computes identical timings for N/S/E/W. True lane or approach assignment is not implemented yet.
+
+
+7. DATABASE DETAILS
+===================
+MongoDB connection:
+- Host: localhost
+- Port: 27017
+- Username: admin
+- Password: admin123
+- Database: autoroute
+
+Collections used:
+- detections: raw detection payloads and count summaries.
+- heartbeats: health metrics from edge device.
+- timings: computed signal timing outputs.
+- alerts: alerts from watchdog/backend.
+- processes: process state posted through /process_status.
+
+Important note:
+- Credentials are hardcoded in source and compose files. This is acceptable only for a local prototype, not for production.
+
+
+8. DATASETS AND MODELS
+======================
+Important model files in ai/:
+- Weapon.pt: custom weapon/object model, about 40 MB.
+- wepon.pt: large custom model, about 262 MB.
+- yolo11m.pt: YOLO11 medium model, about 40 MB.
+- yolo11n.pt: YOLO11 nano model, about 5.6 MB.
+- yolov8l.pt: YOLOv8 large model, about 88 MB.
+- yolov8n.pt: YOLOv8 nano model, about 6.5 MB.
+
+Important sample media:
+- ai/weapon.mp4
+- ai/weapon2.mp4
+- ai/data/sample.mp4
+- ai/data/sample2.mp4
+- ai/data/sample.jpg
+
+Training/data folders:
+- ai/data/train/images
+- ai/data/train/labels
+- ai/data/valid/images
+- ai/data/valid/labels
+- ai/data/test/images
+- ai/data/test/labels
+- ai/data/sub/train/images
+- ai/data/sub/train/labels
+- ai/data/sub/valid/images
+- ai/data/sub/valid/labels
+
+ai/data/data.yaml:
+- Defines 80 classes that are animal-related.
+- This appears mismatched with the traffic use case.
+
+ai/data/sub/data.yaml:
+- Defines 7 traffic classes:
+  - bicycle
+  - bus
+  - car
+  - motorbike
+  - rickshaw
+  - truck
+  - van
+- Roboflow project: ai-traffic-system
+- License: CC BY 4.0
+
+ai/data/README.roboflow.txt:
+- Street View dataset exported from Roboflow.
+- Includes 6633 images.
+- Annotated classes mentioned: person, car, bicycle, bus, motorbike.
+- YOLO v5 PyTorch format.
+- Preprocessing: auto-orientation, resize to 640x640.
+- Augmentation: horizontal flip, brightness shift, salt-and-pepper noise.
+
+ai/YOLO11/yolo11m/args.yaml:
+- YOLO11 training run.
+- model: yolo11m.pt
+- epochs: 600
+- batch: 6
+- imgsz: 780
+- cache: disk
+- device: 0
+- optimizer: auto
+- resume: yolo11m.pt
+
+Large archives:
+- ai/New Compressed (zipped) Folder.zip is about 12.35 GB.
+- ai/mlModels.rar is about 346 MB.
+- These should not be kept in normal source control.
+
+
+9. HOW TO RUN LOCALLY
+=====================
+This assumes required Python packages are installed in the active environment.
+There is currently no requirements.txt, so dependencies must be installed manually or captured into one.
+
+Start MongoDB:
+  docker compose -f infra/docker-compose.yml up -d
+
+Alternative MongoDB command:
+  docker run -d --name autoroute-mongo -p 27017:27017 -e MONGO_INITDB_ROOT_USERNAME=admin -e MONGO_INITDB_ROOT_PASSWORD=admin123 mongo:6
+
+Start backend:
+  uvicorn backend.main:app --reload
+
+Start dashboard:
+  streamlit run dashboard/app.py
+
+Start heartbeat:
+  python edge/heartbeat.py
+
+Start edge inference:
+  python edge/inference3.py
+
+Start watchdog:
+  python edge/watchdog.py
+
+Useful backend URLs:
+- http://127.0.0.1:8000/
+- http://127.0.0.1:8000/docs
+- http://127.0.0.1:8000/latest/J1
+- http://127.0.0.1:8000/status/J1
+- http://127.0.0.1:8000/process_status/J1
+- http://127.0.0.1:8000/alerts/J1
+
+
+10. CURRENT ISSUES AND RISKS
+============================
+Security:
+- Twilio SID/auth token and phone numbers are hardcoded in backend/sms_utils.py.
+- MongoDB username/password are hardcoded in backend/main.py and Docker files.
+- Secrets should be rotated if they are real and moved to environment variables.
+
+Dependency management:
+- No requirements.txt or pyproject.toml was found.
+- Reproducing the environment will be difficult on another machine.
+
+Path consistency:
+- edge/inference3.py uses MODEL_PATH = ai/runs/detect/train15/weights/best.pt, but this path was not visible in the top-level inventory.
+- edge/inference3.py uses VIDEO_PATH = data/sample2.mp4, while the actual sample appears under ai/data/sample2.mp4.
+- ai/inference3.py uses best.pt and sample2.mp4 relative paths that may fail unless run from a specific directory.
+
+Schema consistency:
+- Some older scripts post "junction" instead of "junction_id".
+- Some older scripts omit ts and counts, so they do not match current backend DetectionPayload.
+- /alert stores "junction" from incoming payload, but /alerts/{junction_id} filters by "junction_id"; this can hide alerts from the dashboard.
+
+Dashboard logic:
+- compute_timing sends the same count dictionary to N, S, E, and W, so the dashboard cannot compute true per-direction timing yet.
+- Dashboard backend URL and junction id are hardcoded.
+
+SMS behavior:
+- /status/{junction_id} sends SMS every time an OFFLINE status is detected.
+- Because dashboard auto-refreshes every 5 seconds, this can repeatedly send SMS.
+
+Process status:
+- GET /process_status/{junction_id} checks local process list on the backend machine, not necessarily the actual edge device.
+- POST /process_status stores process data, but the dashboard currently does not read it.
+
+Data/model organization:
+- The repo contains multiple datasets, model weights, archives, and experiments together.
+- Large files can make Git operations and backups slow.
+- Some datasets/classes are not aligned with traffic detection.
+
+Code quality:
+- Several files are older experiments and are not compatible with the current backend.
+- ai/utils.py has an unfinished map_to_lane function.
+- ai/test2.py has an argparse bug.
+- Readme.md is not a real setup guide.
+- There are no automated tests for API behavior, timing logic, or payload compatibility.
+
+Production readiness:
+- No authentication on backend endpoints.
+- No CORS policy shown for current backend.
+- No structured logging.
+- No retry/backoff strategy for backend posts.
+- No message queue for buffering when backend is down.
+- No camera reconnection strategy beyond exiting the inference loop.
+- No formal deployment packaging for backend/dashboard/edge services.
+
+
+11. SUGGESTED IMPROVEMENTS
+==========================
+Highest priority:
+1. Move all secrets to environment variables.
+2. Rotate exposed Twilio credentials if they are real.
+3. Add requirements.txt or pyproject.toml.
+4. Fix path mismatches in edge/inference3.py.
+5. Standardize payload schema across all inference scripts.
+6. Fix alert field mismatch: always use junction_id.
+7. Replace Readme.md with a proper setup guide.
+8. Add .gitignore rules for model weights, archives, datasets, caches, and virtual environments.
+
+Backend improvements:
+1. Add environment-based settings with pydantic-settings.
+2. Add CORS middleware if dashboard/frontend access needs it.
+3. Add request validation examples and OpenAPI descriptions.
+4. Add endpoint for latest timing result.
+5. Add rate limiting or cooldown for SMS alerts.
+6. Store alert severity, source, acknowledged state, and resolved state.
+7. Use timezone-aware UTC datetimes.
+8. Add indexes on MongoDB collections:
+   - detections: junction_id + ts
+   - heartbeats: junction_id + ts
+   - alerts: junction_id + ts
+   - timings: junction_id + ts
+
+AI/edge improvements:
+1. Implement lane/approach mapping using configured ROIs.
+2. Add camera source configuration through env/config file.
+3. Support RTSP cameras.
+4. Add reconnect logic when camera disconnects.
+5. Track FPS and average confidence from inference and pass them to heartbeat.
+6. Add configurable frame skip, confidence threshold, device, and image size.
+7. Save optional annotated clips/images for debugging.
+8. Add model warmup and device fallback from CUDA to CPU.
+9. Add ONNX/TensorRT export path for faster edge inference.
+
+Dashboard improvements:
+1. Add sidebar controls for backend URL and junction id.
+2. Show historical charts for vehicle counts and signal timings.
+3. Add alert acknowledgement buttons.
+4. Add camera preview stream or latest annotated frame.
+5. Add per-lane/per-approach traffic view.
+6. Add status history timeline.
+7. Add model performance metrics: FPS, latency, dropped frames, average confidence.
+8. Add export to CSV for detections, alerts, and timings.
+
+Testing improvements:
+1. Add unit tests for compute_timings_from_counts.
+2. Add API tests with FastAPI TestClient.
+3. Add MongoDB integration tests using a test database or container.
+4. Add schema tests for inference payloads.
+5. Add smoke test script that verifies MongoDB, backend, dashboard endpoints, and inference payload acceptance.
+
+Project structure improvements:
+1. Split production code from experiments:
+   - src/backend
+   - src/edge
+   - src/dashboard
+   - experiments
+   - data
+   - models
+2. Move unrelated scripts to archive/ or remove them.
+3. Move huge archives outside the repo.
+4. Add docs/ for architecture, setup, API, model training, and deployment.
+5. Add config examples:
+   - .env.example
+   - config/junctions.example.yaml
+
+
+12. FEATURE IDEAS TO ADD
+========================
+Traffic intelligence:
+1. Real per-lane detection using polygon ROIs.
+2. Vehicle tracking with IDs using ByteTrack or BoT-SORT.
+3. Queue length estimation per lane.
+4. Average waiting time estimation.
+5. Congestion score per approach.
+6. Emergency vehicle detection and priority green signal.
+7. Pedestrian detection and pedestrian crossing timing.
+8. Red-light violation detection.
+9. Wrong-way driving detection.
+10. Incident/stalled vehicle detection.
+
+Signal control:
+1. Real adaptive signal phases per junction.
+2. Manual override mode from dashboard.
+3. Simulation mode for testing timing decisions.
+4. Multi-junction coordination.
+5. Green wave optimization across connected roads.
+6. Fail-safe static timing fallback when AI/camera/backend fails.
+
+Operations:
+1. Admin login and role-based access.
+2. Junction management page.
+3. Camera management page.
+4. Model version management.
+5. Alert escalation workflow.
+6. Maintenance mode for edge devices.
+7. Audit log of timing changes and alert actions.
+
+Analytics:
+1. Daily/weekly/monthly traffic reports.
+2. Peak-hour analysis.
+3. Vehicle class trend charts.
+4. Heatmaps by time and junction.
+5. CSV/PDF report export.
+6. Model accuracy review dashboard.
+
+Deployment:
+1. Dockerfile for backend.
+2. Dockerfile for dashboard.
+3. Docker Compose for backend, dashboard, MongoDB, and edge simulator.
+4. Windows service or systemd service setup for edge scripts.
+5. Central config management for many junctions.
+6. Cloud dashboard with edge devices posting over secure HTTPS.
+
+
+13. RECOMMENDED NEXT DEVELOPMENT ORDER
+======================================
+Phase 1 - Make current prototype reproducible:
+1. Create requirements.txt.
+2. Create .env.example.
+3. Move secrets out of code.
+4. Fix paths in edge/inference3.py.
+5. Fix alert junction_id mismatch.
+6. Replace Readme.md.
+
+Phase 2 - Make data flow correct:
+1. Standardize DetectionPayload across every inference script.
+2. Implement lane ROI mapping.
+3. Send approach-specific counts instead of duplicating counts to N/S/E/W.
+4. Store latest computed timing and display it.
+
+Phase 3 - Make monitoring reliable:
+1. Add alert cooldown.
+2. Use stored process_status instead of backend-local psutil only.
+3. Add camera reconnect logic.
+4. Add structured logs.
+
+Phase 4 - Make it production-like:
+1. Add authentication.
+2. Add Dockerfiles.
+3. Add tests.
+4. Add deployment documentation.
+5. Add model versioning and data/model cleanup.
+
+
+14. CLEANUP RECOMMENDATIONS
+===========================
+Keep as core:
+- backend/main.py
+- backend/sms_utils.py after secret cleanup
+- dashboard/app.py
+- edge/inference3.py after path/config cleanup
+- edge/heartbeat.py
+- edge/watchdog.py
+- infra/docker-compose.yml
+- traffic dataset metadata and chosen trained model
+
+Move to experiments/:
+- ai/inference.py
+- ai/inference1.py
+- ai/inference2.py
+- ai/inference3.py if edge/inference3.py becomes canonical
+- ai/test1.py
+- ai/test2.py
+- trial.py
+- trial2.py
+- ai/out.py
+- ai/verify.py
+
+Remove or archive outside project:
+- spam.py
+- test.py
+- new.asm
+- new.py if unused
+- huge zip/rar archives
+- duplicate model weights not used by the current pipeline
+
+
+15. QUICK PROJECT DESCRIPTION FOR PRESENTATION
+==============================================
+SmartFlow is a computer vision based smart traffic signal prototype. It uses YOLO object detection to identify and count vehicles from traffic camera footage, sends live detection results to a FastAPI backend, stores events in MongoDB, computes adaptive green-light timings using weighted vehicle counts, and visualizes real-time traffic, system health, alerts, and signal timings through a Streamlit dashboard. Edge scripts provide heartbeat monitoring and watchdog-based recovery so the system can detect camera or process failures and raise alerts.
+
+
+16. FINAL NOTES
+===============
+The strongest part of this project is that it already connects AI inference, backend storage, dashboard monitoring, signal timing, and edge health checks into one working prototype concept.
+
+The biggest gaps are reproducibility, secret handling, schema consistency, path consistency, and true per-lane traffic mapping. Fixing those will turn this from a collection of strong prototype pieces into a much cleaner end-to-end system.

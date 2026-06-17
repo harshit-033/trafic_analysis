@@ -1,0 +1,91 @@
+train:
+  - ../data/train/images
+
+val:
+  - ../data/valid/images
+
+test: 
+  - ../data/test/images
+
+nc: 80
+names:
+  0: Bear
+  1: Brown bear
+  2: Bull
+  3: Butterfly
+  4: Camel
+  5: Canary
+  6: Caterpillar
+  7: Cattle
+  8: Centipede
+  9: Cheetah
+  10: Chicken
+  11: Crab
+  12: Crocodile
+  13: Deer
+  14: Duck
+  15: Eagle
+  16: Elephant
+  17: Fish
+  18: Fox
+  19: Frog
+  20: Giraffe
+  21: Goat
+  22: Goldfish
+  23: Goose
+  24: Hamster
+  25: Harbor seal
+  26: Hedgehog
+  27: Hippopotamus
+  28: Horse
+  29: Jaguar
+  30: Jellyfish
+  31: Kangaroo
+  32: Koala
+  33: Ladybug
+  34: Leopard
+  35: Lion
+  36: Lizard
+  37: Lynx
+  38: Magpie
+  39: Monkey
+  40: Moths and butterflies
+  41: Mouse
+  42: Mule
+  43: Ostrich
+  44: Otter
+  45: Owl
+  46: Panda
+  47: Parrot
+  48: Penguin
+  49: Pig
+  50: Polar bear
+  51: Rabbit
+  52: Raccoon
+  53: Red panda
+  54: Raven
+  55: Rhinoceros
+  56: Scorpion
+  57: Sea lion
+  58: Sea turtle
+  59: Seahorse
+  60: Shark
+  61: Sheep
+  62: Shrimp
+  63: Snail
+  64: Snake
+  65: Sparrow
+  66: Spider
+  67: Squid
+  68: Squirrel
+  69: Starfish
+  70: Swan
+  71: Tick
+  72: Tiger
+  73: Tortoise
+  74: Turkey
+  75: Turtle
+  76: Whale
+  77: Woodpecker
+  78: Worm
+  79: Zebra

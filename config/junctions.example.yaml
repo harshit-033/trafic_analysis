@@ -1,0 +1,17 @@
+junctions:
+  - id: "J1"
+    name: "Main St & 1st Ave"
+    camera_url: "data/sample2.mp4"
+    model_path: "models/yolo11n.pt"
+    location:
+      lat: 34.0522
+      lng: -118.2437
+    approaches:
+      - id: "N"
+        name: "Northbound"
+      - id: "S"
+        name: "Southbound"
+      - id: "E"
+        name: "Eastbound"
+      - id: "W"
+        name: "Westbound"
