@@ -93,8 +93,7 @@ python src/edge/inference3.py
 python src/edge/heartbeat.py
 ```
 
-> **Pro-Tip:** Instead of running the inference and heartbeat manually, you can test the self-healing system by just running `python src/edge/watchdog.py`. The watchdog will automatically spawn the AI and Heartbeat for you!
+> Instead of running the inference and heartbeat manually, you can test the self-healing system by just running `python src/edge/watchdog.py`. The watchdog will automatically spawn the AI and Heartbeat for you!
 
 ---
 
-*Built with ❤️ using PyTorch, FastAPI, and Streamlit.*
