@@ -57,3 +57,12 @@ python src/edge/inference3.py
 ```bash
 python src/edge/watchdog.py
 ```
+=======
+> Instead of running the inference and heartbeat manually, you can test the self-healing system by just running `python src/edge/watchdog.py`. The watchdog will automatically spawn the AI and Heartbeat for you!
+
+---
+
+> You can replace sample2.mp4 with your own test video but keep your video in the same directory as sample2 and rename your video as sample2.mp4.
+
+
+
