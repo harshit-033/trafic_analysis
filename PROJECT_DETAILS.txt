@@ -700,3 +700,5 @@ SmartFlow is a computer vision based smart traffic signal prototype. It uses YOL
 The strongest part of this project is that it already connects AI inference, backend storage, dashboard monitoring, signal timing, and edge health checks into one working prototype concept.
 
 The biggest gaps are reproducibility, secret handling, schema consistency, path consistency, and true per-lane traffic mapping. Fixing those will turn this from a collection of strong prototype pieces into a much cleaner end-to-end system.
+
+hello
