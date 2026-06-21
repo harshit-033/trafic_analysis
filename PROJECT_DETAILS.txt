@@ -701,4 +701,3 @@ The strongest part of this project is that it already connects AI inference, bac
 
 The biggest gaps are reproducibility, secret handling, schema consistency, path consistency, and true per-lane traffic mapping. Fixing those will turn this from a collection of strong prototype pieces into a much cleaner end-to-end system.
 
-hello
